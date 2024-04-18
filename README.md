@@ -173,6 +173,7 @@ injected component, you can call any of the following:
 - `this.props.stripe.createToken`
 - `this.props.stripe.createSource`
 - `this.props.stripe.handleCardPayment`
+- `this.props.stripe.handleCardSetup`
 
 Calling any of these methods will collect data from the appropriate Element and
 use it to submit payment data to Stripe.
@@ -208,16 +209,21 @@ class CheckoutForm extends React.Component {
         console.log('Received Stripe PaymentMethod:', paymentMethod);
       });
 
-    // You can also use handleCardPayment with the Payment Intents API automatic confirmation flow.
+    // You can also use handleCardPayment with the PaymentIntents API automatic confirmation flow.
     // See our handleCardPayment documentation for more:
     // https://stripe.com/docs/stripe-js/reference#stripe-handle-card-payment
     this.props.stripe.handleCardPayment('{PAYMENT_INTENT_CLIENT_SECRET}', data);
+
+    // You can also use handleCardSetup with the SetupIntents API.
+    // See our handleCardSetup documentation for more:
+    // https://stripe.com/docs/stripe-js/reference#stripe-handle-card-setup
+    this.props.stripe.handleCardSetup('{PAYMENT_INTENT_CLIENT_SECRET}', data);
 
     // You can also use createToken to create tokens.
     // See our tokens documentation for more:
     // https://stripe.com/docs/stripe-js/reference#stripe-create-token
     this.props.stripe.createToken({type: 'card', name: 'Jenny Rosen'});
-    // token type can optionally be inferred if there is only one one Element
+    // token type can optionally be inferred if there is only one Element
     // with which to create tokens
     // this.props.stripe.createToken({name: 'Jenny Rosen'});
 
@@ -525,7 +531,12 @@ See [Advanced integrations](#advanced-integrations) for more information on when
 to use each.
 
 The `...` above represents that this component accepts props for any option that
-can be passed into `Stripe(apiKey, options)`.
+can be passed into `Stripe(apiKey, options)`. For example, if you are using
+[Stripe Connect](https://stripe.com/connect) and want to act on behalf of a
+connected account, you can pass `stripeAccount="acct_123"` as a property to
+`<StripeProvider>`. This will get used just like passing `stripeAccount` in the
+options of the `Stripe` constructor or like using `stripe_account` when your
+backend calls the Stripe API directly
 
 ### `<Elements>`
 
@@ -557,7 +568,7 @@ These components display the UI for Elements, and must be used within
 - `CardElement`
 - `CardNumberElement`
 - `CardExpiryElement`
-- `CardCVCElement`
+- `CardCvcElement`
 - `PaymentRequestButtonElement`
 - `IbanElement`
 - `IdealBankElement`
@@ -714,6 +725,13 @@ type FactoryProps = {
       paymentMethodData?: Object
     ) => Promise<{
       paymentIntent?: Object,
+      error?: Object,
+    }>,
+    handleCardSetup: (
+      clientSecret: string,
+      paymentMethodData?: Object
+    ) => Promise<{
+      setupIntent?: Object,
       error?: Object,
     }>,
     // and other functions available on the `stripe` object,
