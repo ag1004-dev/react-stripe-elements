@@ -12,6 +12,7 @@ import PaymentRequestButtonElement from './components/PaymentRequestButtonElemen
 const CardElement = Element('card', {
   impliedTokenType: 'card',
   impliedSourceType: 'card',
+  impliedPaymentMethodType: 'card',
 });
 
 // Split Fields
@@ -20,10 +21,11 @@ const CardElement = Element('card', {
 const CardNumberElement = Element('cardNumber', {
   impliedTokenType: 'card',
   impliedSourceType: 'card',
+  impliedPaymentMethodType: 'card',
 });
 const CardExpiryElement = Element('cardExpiry');
-const CardCVCElement = Element('cardCvc');
-const PostalCodeElement = Element('postalCode');
+const CardCvcElement = Element('cardCvc');
+const CardCVCElement = CardCvcElement; // deprecated in favor of CardCvcElement which better matches Elements API
 
 // IBAN
 const IbanElement = Element('iban', {
@@ -41,8 +43,8 @@ export {
   CardElement,
   CardNumberElement,
   CardExpiryElement,
+  CardCvcElement,
   CardCVCElement,
-  PostalCodeElement,
   PaymentRequestButtonElement,
   IbanElement,
   IdealBankElement,

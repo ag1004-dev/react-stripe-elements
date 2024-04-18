@@ -1,7 +1,7 @@
 // @flow
 import React from 'react';
 import PropTypes from 'prop-types';
-import shallowEqual from '../utils/shallowEqual';
+import isEqual from '../utils/isEqual';
 import {type ElementContext, elementContextTypes} from './Elements';
 
 type Props = {
@@ -26,7 +26,11 @@ const capitalized = (str: string) => {
 
 const Element = (
   type: string,
-  hocOptions: {impliedTokenType?: string, impliedSourceType?: string} = {}
+  hocOptions: {
+    impliedTokenType?: string,
+    impliedSourceType?: string,
+    impliedPaymentMethodType?: string,
+  } = {}
 ) =>
   class extends React.Component<Props> {
     static propTypes = {
@@ -70,12 +74,17 @@ const Element = (
 
         element.mount(this._ref);
 
-        // Register Element for automatic token / source creation
-        if (hocOptions.impliedTokenType || hocOptions.impliedSourceType) {
+        // Register Element for automatic token / source / paymentMethod creation
+        if (
+          hocOptions.impliedTokenType ||
+          hocOptions.impliedSourceType ||
+          hocOptions.impliedPaymentMethodType
+        ) {
           this.context.registerElement(
             element,
             hocOptions.impliedTokenType,
-            hocOptions.impliedSourceType
+            hocOptions.impliedSourceType,
+            hocOptions.impliedPaymentMethodType
           );
         }
       });
@@ -85,7 +94,7 @@ const Element = (
       const options = _extractOptions(nextProps);
       if (
         Object.keys(options).length !== 0 &&
-        !shallowEqual(options, this._options)
+        !isEqual(options, this._options)
       ) {
         this._options = options;
         if (this._element) {

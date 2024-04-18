@@ -166,9 +166,17 @@ Use the `injectStripe` [Higher-Order Component][hoc] (HOC) to build your payment
 form components in the `Elements` tree. The [Higher-Order Component][hoc]
 pattern in React can be unfamiliar to those who've never seen it before, so
 consider reading up before continuing. The `injectStripe` HOC provides the
-`this.props.stripe` property that manages your `Elements` groups. You can call
-`this.props.stripe.createToken` or `this.props.stripe.createSource` within a
-component that has been injected to submit payment data to Stripe.
+`this.props.stripe` property that manages your `Elements` groups. Within an
+injected component, you can call any of the following:
+
+- `this.props.stripe.createPaymentMethod`
+- `this.props.stripe.createToken`
+- `this.props.stripe.createSource`
+- `this.props.stripe.handleCardPayment`
+- `this.props.stripe.handleCardSetup`
+
+Calling any of these methods will collect data from the appropriate Element and
+use it to submit payment data to Stripe.
 
 [hoc]: https://facebook.github.io/react/docs/higher-order-components.html
 
@@ -191,22 +199,43 @@ class CheckoutForm extends React.Component {
     // We don't want to let default form submission happen here, which would refresh the page.
     ev.preventDefault();
 
-    // Within the context of `Elements`, this call to createToken knows which Element to
-    // tokenize, since there's only one in this group.
-    this.props.stripe.createToken({name: 'Jenny Rosen'}).then(({token}) => {
-      console.log('Received Stripe token:', token);
+    // Within the context of `Elements`, this call to createPaymentMethod knows from which Element to
+    // create the PaymentMethod, since there's only one in this group.
+    // See our createPaymentMethod documentation for more:
+    // https://stripe.com/docs/stripe-js/reference#stripe-create-payment-method
+    this.props.stripe
+      .createPaymentMethod('card', {billing_details: {name: 'Jenny Rosen'}})
+      .then(({paymentMethod}) => {
+        console.log('Received Stripe PaymentMethod:', paymentMethod);
+      });
+
+    // You can also use handleCardPayment with the PaymentIntents API automatic confirmation flow.
+    // See our handleCardPayment documentation for more:
+    // https://stripe.com/docs/stripe-js/reference#stripe-handle-card-payment
+    this.props.stripe.handleCardPayment('{PAYMENT_INTENT_CLIENT_SECRET}', data);
+
+    // You can also use handleCardSetup with the SetupIntents API.
+    // See our handleCardSetup documentation for more:
+    // https://stripe.com/docs/stripe-js/reference#stripe-handle-card-setup
+    this.props.stripe.handleCardSetup('{PAYMENT_INTENT_CLIENT_SECRET}', data);
+
+    // You can also use createToken to create tokens.
+    // See our tokens documentation for more:
+    // https://stripe.com/docs/stripe-js/reference#stripe-create-token
+    this.props.stripe.createToken({type: 'card', name: 'Jenny Rosen'});
+    // token type can optionally be inferred if there is only one Element
+    // with which to create tokens
+    // this.props.stripe.createToken({name: 'Jenny Rosen'});
+
+    // You can also use createSource to create Sources.
+    // See our Sources documentation for more:
+    // https://stripe.com/docs/stripe-js/reference#stripe-create-source
+    this.props.stripe.createSource({
+      type: 'card',
+      owner: {
+        name: 'Jenny Rosen',
+      },
     });
-
-    // However, this line of code will do the same thing:
-    //
-    // this.props.stripe.createToken({type: 'card', name: 'Jenny Rosen'});
-
-    // You can also use createSource to create Sources. See our Sources
-    // documentation for more: https://stripe.com/docs/stripe-js/reference#stripe-create-source
-    //
-    // this.props.stripe.createSource({type: 'card', owner: {
-    //   name: 'Jenny Rosen'
-    // }});
   };
 
   render() {
@@ -343,16 +372,16 @@ application in some way.
 
 ```html
 <html>
-<head>
-  <!-- ... -->
+  <head>
+    <!-- ... -->
 
-  <!-- Note the 'id' and 'async' attributes:                         -->
-  <!--    ┌────────────┐                                 ┌───┐       -->
-  <script id="stripe-js" src="https://js.stripe.com/v3/" async></script>
+    <!-- Note the 'id' and 'async' attributes:                         -->
+    <!--    ┌────────────┐                                 ┌───┐       -->
+    <script id="stripe-js" src="https://js.stripe.com/v3/" async></script>
 
+    <!-- ... -->
+  </head>
   <!-- ... -->
-</head>
-<!-- ... -->
 </html>
 ```
 
@@ -494,15 +523,20 @@ There are two _distinct_ props shapes you can pass to `<StripeProvider>`.
 
 ```jsx
 type StripeProviderProps =
-  | { apiKey: string, ... }
-  | { stripe: StripeObject | null };
+  | {apiKey: string, ...}
+  | {stripe: StripeObject | null};
 ```
 
 See [Advanced integrations](#advanced-integrations) for more information on when
 to use each.
 
 The `...` above represents that this component accepts props for any option that
-can be passed into `Stripe(apiKey, options)`.
+can be passed into `Stripe(apiKey, options)`. For example, if you are using
+[Stripe Connect](https://stripe.com/connect) and want to act on behalf of a
+connected account, you can pass `stripeAccount="acct_123"` as a property to
+`<StripeProvider>`. This will get used just like passing `stripeAccount` in the
+options of the `Stripe` constructor or like using `stripe_account` when your
+backend calls the Stripe API directly
 
 ### `<Elements>`
 
@@ -534,8 +568,7 @@ These components display the UI for Elements, and must be used within
 - `CardElement`
 - `CardNumberElement`
 - `CardExpiryElement`
-- `CardCVCElement`
-- `PostalCodeElement`
+- `CardCvcElement`
 - `PaymentRequestButtonElement`
 - `IbanElement`
 - `IdealBankElement`
@@ -636,7 +669,7 @@ class CheckoutForm extends React.Component {
     /* ... */
   }
   onCompleteCheckout() {
-    this.props.stripe.createSource({type: 'card'}).then(/* ... */);
+    this.props.stripe.createPaymentMethod('card').then(/* ... */);
   }
 }
 
@@ -678,6 +711,27 @@ type FactoryProps = {
     }>,
     createSource: (sourceData: {type: string}) => Promise<{
       source?: Object,
+      error?: Object,
+    }>,
+    createPaymentMethod: (
+      type: string,
+      paymentMethodData?: Object
+    ) => Promise<{
+      paymentMethod?: Object,
+      error?: Object,
+    }>,
+    handleCardPayment: (
+      clientSecret: string,
+      paymentMethodData?: Object
+    ) => Promise<{
+      paymentIntent?: Object,
+      error?: Object,
+    }>,
+    handleCardSetup: (
+      clientSecret: string,
+      paymentMethodData?: Object
+    ) => Promise<{
+      setupIntent?: Object,
       error?: Object,
     }>,
     // and other functions available on the `stripe` object,
