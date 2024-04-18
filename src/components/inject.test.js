@@ -441,6 +441,20 @@ describe('injectStripe()', () => {
       );
     });
 
+    it('props.stripe.handleCardPayment calls handleCardPayment with only the clientSecret when no element is present', () => {
+      context.getRegisteredElements = () => [];
+
+      const Injected = injectStripe(WrappedComponent);
+
+      const wrapper = shallow(<Injected />, {
+        context,
+      });
+
+      const props = wrapper.props();
+      props.stripe.handleCardPayment('clientSecret');
+      expect(handleCardPayment).toHaveBeenCalledWith('clientSecret');
+    });
+
     it('props.stripe.handleCardSetup calls handleCardSetup with element and clientSecret when only clientSecret is passed in', () => {
       const Injected = injectStripe(WrappedComponent);
 
@@ -519,6 +533,20 @@ describe('injectStripe()', () => {
       );
     });
 
+    it('props.stripe.handleCardSetup calls handleCardSetup with only the clientSecret when no element is present', () => {
+      context.getRegisteredElements = () => [];
+
+      const Injected = injectStripe(WrappedComponent);
+
+      const wrapper = shallow(<Injected />, {
+        context,
+      });
+
+      const props = wrapper.props();
+      props.stripe.handleCardSetup('clientSecret');
+      expect(handleCardSetup).toHaveBeenCalledWith('clientSecret');
+    });
+
     it('throws when `getWrappedInstance` is called without `{withRef: true}` option.', () => {
       const Injected = injectStripe(WrappedComponent);
 
@@ -526,7 +554,7 @@ describe('injectStripe()', () => {
         context,
       });
 
-      expect(() => wrapper.node.getWrappedInstance()).toThrow(
+      expect(() => wrapper.instance().getWrappedInstance()).toThrow(
         'To access the wrapped instance, the `{withRef: true}` option must be set when calling `injectStripe()`'
       );
     });
@@ -548,7 +576,7 @@ describe('injectStripe()', () => {
       });
 
       expect(
-        wrapper.node.getWrappedInstance() instanceof WrappedClassComponent
+        wrapper.instance().getWrappedInstance() instanceof WrappedClassComponent
       ).toBe(true);
     });
   });

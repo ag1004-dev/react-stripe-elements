@@ -24,6 +24,7 @@ describe('index', () => {
   let elementsMock;
   let stripeMock;
   let rawElementMock;
+
   beforeEach(() => {
     elementMock = {
       mount: jest.fn(),
@@ -49,7 +50,14 @@ describe('index', () => {
       handleCardSetup: jest.fn(),
     };
 
+    // jest.spyOn(console, 'error');
+    // console.error.mockImplementation(() => {});
+
     window.Stripe = jest.fn().mockReturnValue(stripeMock);
+  });
+
+  afterEach(() => {
+    // console.error.mockRestore();
   });
 
   const WrappedCheckout = (onSubmit) => {
@@ -97,7 +105,14 @@ describe('index', () => {
         </Elements>
       </StripeProvider>
     );
+
+    // Prevent the console.errors to keep the test output clean
+    jest.spyOn(console, 'error');
+    console.error.mockImplementation(() => {});
+
     expect(() => app.find('form').simulate('submit')).not.toThrow();
+
+    console.error.mockRestore();
   });
 
   describe('createToken', () => {
@@ -547,6 +562,16 @@ describe('index', () => {
   });
 
   describe('errors', () => {
+    beforeEach(() => {
+      // Prevent the console.error to keep the test output clean
+      jest.spyOn(console, 'error');
+      console.error.mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      console.error.mockRestore();
+    });
+
     describe('createSource', () => {
       it('should throw if no source type is specified', () => {
         const Checkout = WrappedCheckout((props) =>
@@ -609,7 +634,7 @@ describe('index', () => {
     });
 
     describe('handleCardPayment', () => {
-      it('should throw if no Slient Secret is specified', () => {
+      it('should throw if no client secret is specified', () => {
         const Checkout = WrappedCheckout((props) =>
           props.stripe.handleCardPayment()
         );
@@ -625,21 +650,6 @@ describe('index', () => {
         );
         expect(() => app.find('form').simulate('submit')).toThrowError(
           /Invalid PaymentIntent client secret/
-        );
-      });
-      it('should throw if no card element is present and no elmenent or payment data is passed in', () => {
-        const Checkout = WrappedCheckout((props) =>
-          props.stripe.handleCardPayment('client_secret')
-        );
-        const app = mount(
-          <StripeProvider apiKey="pk_test_xxx">
-            <Elements>
-              <Checkout>Hello world</Checkout>
-            </Elements>
-          </StripeProvider>
-        );
-        expect(() => app.find('form').simulate('submit')).toThrowError(
-          /Could not find a CardElement or CardNumberElement/
         );
       });
     });
